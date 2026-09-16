@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+/* Google Fonts loaded via <link> in index.html */
+
+@theme {
+  --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+/* Base resets */
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Kanban board gradient background */
+.board-bg {
+  background: linear-gradient(135deg, #fdf4ff 0%, #f0f4ff 55%, #eef2ff 100%);
+  min-height: 100vh;
+}
+
+/* Spinner animation */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  animation: spin 0.7s linear infinite;
+}
