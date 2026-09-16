@@ -83,11 +83,6 @@ export function Auth() {
           </svg>
           Sign in with Google
         </button>
-
-        {/* label-sm: Inter 11px 600 0.02em — disabled/muted */}
-        <p style={{ fontSize: '11px', fontWeight: '600', letterSpacing: '0.02em', color: '#94a3b8', textAlign: 'center', textTransform: 'uppercase' }}>
-          Your tasks are private &amp; visible only to you
-        </p>
       </div>
     </div>
   )

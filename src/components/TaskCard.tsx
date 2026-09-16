@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { STATUSES } from './TaskItem'
 import type { Task, Status } from './TaskItem'
+import type { ActivityType } from '../lib/activityLog'
 
 /*
  * DESIGN.md §Task Cards:
@@ -26,9 +27,10 @@ const BADGE: Record<Status, BadgeMeta> = {
 interface Props {
   task: Task
   onStatusChanged: () => void
+  onActivity: (type: ActivityType, taskTitle: string, newStatus?: string) => void
 }
 
-export function TaskCard({ task, onStatusChanged }: Props) {
+export function TaskCard({ task, onStatusChanged, onActivity }: Props) {
   const [deleting, setDeleting] = useState(false)
 
   async function handleStatusChange(e: React.ChangeEvent<HTMLSelectElement>) {
@@ -41,7 +43,10 @@ export function TaskCard({ task, onStatusChanged }: Props) {
       .eq('id', task.id)
 
     if (error) console.error('Failed to update status:', error.message)
-    else onStatusChanged()
+    else {
+      onActivity('status_updated', task.title, next)
+      onStatusChanged()
+    }
   }
 
   async function handleDelete() {
@@ -56,6 +61,7 @@ export function TaskCard({ task, onStatusChanged }: Props) {
       console.error('Failed to delete task:', error.message)
       setDeleting(false)
     } else {
+      onActivity('deleted', task.title)
       onStatusChanged() // triggers parent refresh
     }
   }

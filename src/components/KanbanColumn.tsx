@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { TaskCard } from './TaskCard'
 import type { Task, Status } from './TaskItem'
+import type { ActivityType } from '../lib/activityLog'
 
 /*
  * DESIGN.md column layout:
@@ -26,9 +27,10 @@ interface Props {
   tasks: Task[]
   userId: string
   onRefresh: () => void
+  onActivity: (type: ActivityType, taskTitle: string, newStatus?: string) => void
 }
 
-export function KanbanColumn({ status, tasks, userId, onRefresh }: Props) {
+export function KanbanColumn({ status, tasks, userId, onRefresh, onActivity }: Props) {
   const [isAdding, setIsAdding] = useState(false)
   const [title, setTitle]       = useState('')
   const [loading, setLoading]   = useState(false)
@@ -50,6 +52,7 @@ export function KanbanColumn({ status, tasks, userId, onRefresh }: Props) {
       console.error('Failed to create task:', error.message)
       setAddError(error.message)
     } else {
+      onActivity('created', trimmed)
       setTitle('')
       setIsAdding(false)
       onRefresh()
@@ -112,7 +115,7 @@ export function KanbanColumn({ status, tasks, userId, onRefresh }: Props) {
       {/* ── Cards — standard density: space-sm (8px) gap ── */}
       <div className="flex flex-col flex-1" style={{ gap: '8px' }}>
         {tasks.map(task => (
-          <TaskCard key={task.id} task={task} onStatusChanged={onRefresh} />
+          <TaskCard key={task.id} task={task} onStatusChanged={onRefresh} onActivity={onActivity} />
         ))}
 
         {/* ── Inline "Create New Card" form (DESIGN.md §Task Cards style) ── */}

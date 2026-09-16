@@ -3,8 +3,11 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from './supabaseClient'
 import { Auth } from './components/Auth'
 import { KanbanColumn } from './components/KanbanColumn'
+import { RecentActivity } from './components/RecentActivity'
 import { STATUSES } from './components/TaskItem'
 import type { Task, Status } from './components/TaskItem'
+import { getActivities, appendActivity } from './lib/activityLog'
+import type { ActivityEntry, ActivityType } from './lib/activityLog'
 
 /*
  * DESIGN.md layout rules:
@@ -21,8 +24,9 @@ import type { Task, Status } from './components/TaskItem'
  */
 
 export default function App() {
-  const [session, setSession] = useState<Session | null | undefined>(undefined)
-  const [tasks,   setTasks]   = useState<Task[]>([])
+  const [session,    setSession]    = useState<Session | null | undefined>(undefined)
+  const [tasks,      setTasks]      = useState<Task[]>([])
+  const [activities, setActivities] = useState<ActivityEntry[]>([])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -33,8 +37,9 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!session) { setTasks([]); return }
+    if (!session) { setTasks([]); setActivities([]); return }
     fetchTasks()
+    setActivities(getActivities(session.user.id))
   }, [session])
 
   async function fetchTasks() {
@@ -44,6 +49,12 @@ export default function App() {
       .order('created_at', { ascending: false })
     if (error) console.error('Failed to fetch tasks:', error.message)
     else setTasks((data as Task[]) ?? [])
+  }
+
+  function logActivity(type: ActivityType, taskTitle: string, newStatus?: string) {
+    if (!session) return
+    const updated = appendActivity(session.user.id, { type, taskTitle, newStatus })
+    setActivities(updated)
   }
 
   async function handleSignOut() {
@@ -118,45 +129,6 @@ export default function App() {
             >
               Task Manager
             </span>
-          </div>
-
-          {/* ── Search field (DESIGN.md §Inputs) ── */}
-          <div
-            className="hidden md:flex items-center gap-2 flex-1"
-            style={{ maxWidth: '320px' }}
-          >
-            <div
-              className="flex items-center gap-2 w-full rounded-md"
-              style={{
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                padding: '0 10px',
-                height: '32px',
-                fontSize: '14px',
-                color: '#94a3b8',
-                letterSpacing: '-0.006em',
-                cursor: 'default',
-                userSelect: 'none',
-              }}
-            >
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-                <circle cx="5.5" cy="5.5" r="4" stroke="#94a3b8" strokeWidth="1.3"/>
-                <path d="M9 9L11.5 11.5" stroke="#94a3b8" strokeWidth="1.3" strokeLinecap="round"/>
-              </svg>
-              <span>Search tasks…</span>
-              {/* Keyboard shortcut badge — code-sm style */}
-              <span
-                className="ml-auto hidden lg:flex items-center"
-                style={{
-                  fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: '500',
-                  color: '#64748b', background: '#f1f5f9',
-                  border: '1px solid #e2e8f0', borderRadius: '4px',
-                  padding: '1px 5px', lineHeight: '14px',
-                }}
-              >
-                ⌘K
-              </span>
-            </div>
           </div>
 
           {/* ── Nav + user ── */}
@@ -249,37 +221,43 @@ export default function App() {
           </div>
         </div>
 
-        {/* ══ Kanban Board ═════════════════════════════════════════════════
-            DESIGN.md: board column wells = Level 0 (flat #F8FAFC).
-            Container card = Level 1 (#FFFFFF, 1px #E2E8F0, shadow-1).
-            Desktop layout: 3-column grid with gutter-lg (1.5rem = 24px).
-        ═════════════════════════════════════════════════════════════════ */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '24px',    /* gutter-lg: 1.5rem */
-          }}
-          className="max-md:grid-cols-1"
-        >
-          {STATUSES.map(status => (
+        {/* ══ Board + Activity sidebar ═══════════════════════════════════════ */}
+        <div className="flex items-start" style={{ gap: '24px' }}>
+
+          {/* ── Kanban columns (flex-1) ── */}
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div
-              key={status}
-              className="rounded-xl bg-white"
               style={{
-                border: '1px solid #e2e8f0',
-                padding: '20px',
-                boxShadow: '0 1px 2px 0 rgba(15,23,42,0.04)',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '24px',
               }}
             >
-              <KanbanColumn
-                status={status}
-                tasks={grouped[status]}
-                userId={session.user.id}
-                onRefresh={fetchTasks}
-              />
+              {STATUSES.map(status => (
+                <div
+                  key={status}
+                  className="rounded-xl bg-white"
+                  style={{
+                    border: '1px solid #e2e8f0',
+                    padding: '20px',
+                    boxShadow: '0 1px 2px 0 rgba(15,23,42,0.04)',
+                  }}
+                >
+                  <KanbanColumn
+                    status={status}
+                    tasks={grouped[status]}
+                    userId={session.user.id}
+                    onRefresh={fetchTasks}
+                    onActivity={logActivity}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+
+          {/* ── Recent Activity sidebar ── */}
+          <RecentActivity activities={activities.slice(0, 5)} />
+
         </div>
       </main>
     </div>
