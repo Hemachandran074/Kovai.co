@@ -10,4 +10,11 @@ export default defineConfig({
     react(),
     babel({ presets: [reactCompilerPreset()] }),
   ],
+  server: {
+    watch: {
+      // Exclude context/ — those files are locked by another process (EBUSY)
+      ignored: [`${import.meta.dirname}/context`],
+    },
+  },
 })
+

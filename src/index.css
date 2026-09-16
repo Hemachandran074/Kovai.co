@@ -1,31 +1,132 @@
 @import "tailwindcss";
 
-/* Google Fonts loaded via <link> in index.html */
+/*
+ * ── Kinetic Slate Design System ──────────────────────────────────────────────
+ * Implemented from DESIGN.md: exact color tokens, typography, elevation, shapes.
+ */
 
 @theme {
+  /* ── Fonts ── */
   --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
-  --font-sans: "Inter", system-ui, sans-serif;
+  --font-sans:    "Inter",              system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono",     ui-monospace, monospace;
+
+  /* ── Kinetic Slate Color Tokens ── */
+  /* Surfaces */
+  --color-ks-surface:            #f8f9ff;
+  --color-ks-surface-dim:        #cbdbf5;
+  --color-ks-surface-low:        #eff4ff;
+  --color-ks-surface-container:  #e5eeff;
+  --color-ks-surface-high:       #dce9ff;
+  --color-ks-surface-highest:    #d3e4fe;
+  --color-ks-surface-white:      #ffffff;
+
+  /* On-surface text */
+  --color-ks-on-surface:         #0b1c30;
+  --color-ks-on-surface-variant: #464555;
+  --color-ks-outline:            #777587;
+  --color-ks-outline-variant:    #c7c4d8;
+
+  /* Primary (Indigo) */
+  --color-ks-primary:            #3525cd;
+  --color-ks-primary-container:  #4f46e5;
+  --color-ks-on-primary:         #ffffff;
+  --color-ks-on-primary-container: #dad7ff;
+  --color-ks-primary-fixed-dim:  #c3c0ff;
+  --color-ks-inverse-primary:    #c3c0ff;
+
+  /* Secondary (Amber) */
+  --color-ks-secondary:          #904d00;
+  --color-ks-secondary-container: #fe932c;
+  --color-ks-on-secondary:       #ffffff;
+
+  /* Tertiary (Emerald) */
+  --color-ks-tertiary:           #005338;
+  --color-ks-tertiary-container: #006e4c;
+  --color-ks-on-tertiary:        #ffffff;
+  --color-ks-on-tertiary-container: #7df1bd;
+
+  /* Error */
+  --color-ks-error:              #ba1a1a;
+  --color-ks-error-container:    #ffdad6;
+
+  /* Explicit slate hierarchy used in docs */
+  --color-slate-50:  #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+
+  /* Status accent tokens (exact from DESIGN.md §Status Accent Tokens) */
+  /* Planned / Backlog — Indigo */
+  --color-status-planned-bg:     #eef2ff;
+  --color-status-planned-text:   #4338ca;
+  --color-status-planned-border: #c7d2fe;
+  --color-status-planned-dot:    #4f46e5;
+
+  /* In Progress — Amber */
+  --color-status-wip-bg:         #fffbeb;
+  --color-status-wip-text:       #92400e;
+  --color-status-wip-border:     #fde68a;
+  --color-status-wip-dot:        #d97706;
+
+  /* Complete — Emerald */
+  --color-status-done-bg:        #ecfdf5;
+  --color-status-done-text:      #065f46;
+  --color-status-done-border:    #a7f3d0;
+  --color-status-done-dot:       #059669;
 }
 
-/* Base resets */
+/* ── Base resets ──────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
+html { font-variant-numeric: tabular-nums; }
 body {
   margin: 0;
   font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.006em;
+  color: var(--color-ks-on-surface);
+  background: var(--color-slate-50);  /* Canvas Base #F8FAFC */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Kanban board gradient background */
-.board-bg {
-  background: linear-gradient(135deg, #fdf4ff 0%, #f0f4ff 55%, #eef2ff 100%);
-  min-height: 100vh;
+/* ── Kinetic Slate elevation shadows (from DESIGN.md §Elevation) ── */
+.ks-shadow-1 {
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+}
+.ks-shadow-2 {
+  box-shadow:
+    0 4px 6px -1px  rgba(15, 23, 42, 0.06),
+    0 2px 4px -2px  rgba(15, 23, 42, 0.04);
+}
+.ks-shadow-3 {
+  box-shadow:
+    0 10px 15px -3px rgba(15, 23, 42, 0.08),
+    0 4px  6px -4px  rgba(15, 23, 42, 0.03);
 }
 
-/* Spinner animation */
-@keyframes spin {
-  to { transform: rotate(360deg); }
+/* ── Pulsing dot for "In Progress" (DESIGN.md §Status Badges) ── */
+@keyframes ks-pulse {
+  0%, 100% { opacity: 1;    transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.8); }
 }
-.spinner {
-  animation: spin 0.7s linear infinite;
+.ks-pulse { animation: ks-pulse 1.8s ease-in-out infinite; }
+
+/* ── Spinner ── */
+@keyframes ks-spin { to { transform: rotate(360deg); } }
+.ks-spinner { animation: ks-spin 0.7s linear infinite; }
+
+/* ── Checked checkbox micro-bounce ── */
+@keyframes ks-bounce {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.2); }
+  70%  { transform: scale(0.92); }
+  100% { transform: scale(1); }
 }
+.ks-bounce { animation: ks-bounce 0.25s ease-out; }

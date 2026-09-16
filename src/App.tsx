@@ -6,11 +6,24 @@ import { KanbanColumn } from './components/KanbanColumn'
 import { STATUSES } from './components/TaskItem'
 import type { Task, Status } from './components/TaskItem'
 
+/*
+ * DESIGN.md layout rules:
+ *   Desktop: fixed left sidebar (240–280px) + flexible canvas with gutter-lg (1.5rem).
+ *   Canvas Base: #F8FAFC (Level 0 — no shadow, no border).
+ *   Header: Level 1 card surface (#FFFFFF, 1px #E2E8F0 border-bottom).
+ *   Board columns: Level 0 wells inside a Level 1 container card.
+ *
+ * Typography roles used:
+ *   headline-xl  (32px 700 -0.025em Plus Jakarta Sans) — board title
+ *   headline-md  (18px 600 -0.015em Plus Jakarta Sans) — app name in header
+ *   body-md      (14px 400 -0.006em Inter) — metadata, nav links
+ *   label-sm     (11px 600  0.02em Inter)  — uppercase label-sm accents
+ */
+
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
-  const [tasks, setTasks] = useState<Task[]>([])
+  const [tasks,   setTasks]   = useState<Task[]>([])
 
-  // Resolve session once, then keep in sync
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const { data: listener } = supabase.auth.onAuthStateChange(
@@ -19,7 +32,6 @@ export default function App() {
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  // Fetch own tasks whenever session changes
   useEffect(() => {
     if (!session) { setTasks([]); return }
     fetchTasks()
@@ -39,95 +51,226 @@ export default function App() {
     if (error) console.error('Sign-out error:', error.message)
   }
 
-  // ── Loading gate ──
+  /* ── Loading gate: never render task list before session resolves ── */
   if (session === undefined) {
     return (
-      <div className="board-bg min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-indigo-400 border-t-transparent rounded-full spinner" />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#f8fafc' }}>
+        <div
+          className="ks-spinner"
+          style={{
+            width: '24px', height: '24px',
+            border: '2px solid #e0e7ff',
+            borderTopColor: '#4f46e5',
+            borderRadius: '9999px',
+          }}
+        />
       </div>
     )
   }
 
-  // ── Signed out ──
   if (!session) return <Auth />
 
-  // Group tasks by status for the three columns
+  /* Group tasks by status for the three kanban columns */
   const grouped = STATUSES.reduce<Record<Status, Task[]>>((acc, s) => {
-    acc[s] = tasks.filter((t) => t.status === s)
+    acc[s] = tasks.filter(t => t.status === s)
     return acc
   }, {} as Record<Status, Task[]>)
 
+  const userInitial = session.user.email?.[0]?.toUpperCase() ?? 'U'
+
   return (
-    <div className="board-bg min-h-screen">
+    /* Canvas Base — Level 0: #F8FAFC, no shadow */
+    <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
 
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-slate-100">
-        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
-
-          {/* Logo */}
+      {/* ══ App Header ═══════════════════════════════════════════════════════
+          Level 1: #FFFFFF bg + 1px #E2E8F0 border-bottom + subtle shadow.
+          DESIGN.md §Inputs — search field: #FFFFFF bg, 1px #E2E8F0 border,
+          focus ring 0 0 0 2px rgba(79,70,229,0.15) with #4F46E5 solid edge.
+      ══════════════════════════════════════════════════════════════════════ */}
+      <header
+        className="sticky top-0 z-20"
+        style={{
+          background: '#ffffff',
+          borderBottom: '1px solid #e2e8f0',
+          boxShadow: '0 1px 2px 0 rgba(15,23,42,0.04)',
+        }}
+      >
+        <div
+          className="flex items-center justify-between gap-6"
+          style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px', height: '56px' }}
+        >
+          {/* ── Logo ── */}
           <div className="flex items-center gap-2.5 shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm">
+            <div
+              className="flex items-center justify-center rounded-lg text-white font-bold"
+              style={{
+                width: '32px', height: '32px',
+                background: '#4f46e5',   /* primary-container */
+                fontSize: '14px', fontWeight: '700',
+              }}
+            >
               T
             </div>
-            <span className="font-display font-bold text-slate-900 text-sm tracking-widest">
-              TASK
+            {/* headline-md: Plus Jakarta Sans 18px 600 */}
+            <span
+              className="font-display"
+              style={{ fontSize: '15px', fontWeight: '600', color: '#0f172a', letterSpacing: '-0.01em', lineHeight: '22px' }}
+            >
+              Task Manager
             </span>
           </div>
 
-          {/* Search (decorative — no scope for live search) */}
-          <div className="hidden md:flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-400 min-w-52 cursor-default select-none">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
-              <path d="M9.5 9.5L12 12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-            </svg>
-            Search everything
+          {/* ── Search field (DESIGN.md §Inputs) ── */}
+          <div
+            className="hidden md:flex items-center gap-2 flex-1"
+            style={{ maxWidth: '320px' }}
+          >
+            <div
+              className="flex items-center gap-2 w-full rounded-md"
+              style={{
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                padding: '0 10px',
+                height: '32px',
+                fontSize: '14px',
+                color: '#94a3b8',
+                letterSpacing: '-0.006em',
+                cursor: 'default',
+                userSelect: 'none',
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                <circle cx="5.5" cy="5.5" r="4" stroke="#94a3b8" strokeWidth="1.3"/>
+                <path d="M9 9L11.5 11.5" stroke="#94a3b8" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+              <span>Search tasks…</span>
+              {/* Keyboard shortcut badge — code-sm style */}
+              <span
+                className="ml-auto hidden lg:flex items-center"
+                style={{
+                  fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: '500',
+                  color: '#64748b', background: '#f1f5f9',
+                  border: '1px solid #e2e8f0', borderRadius: '4px',
+                  padding: '1px 5px', lineHeight: '14px',
+                }}
+              >
+                ⌘K
+              </span>
+            </div>
           </div>
 
-          {/* Nav + user */}
-          <div className="flex items-center gap-4">
-            <nav className="hidden sm:flex items-center gap-4">
-              <span className="text-sm font-semibold text-pink-500 cursor-default">Tasks</span>
+          {/* ── Nav + user ── */}
+          <div className="flex items-center gap-1">
+            {/* Ghost nav links — body-md */}
+            <nav className="hidden sm:flex items-center">
+              {/* "Tasks" — active, primary colour */}
+              <span
+                className="rounded-md flex items-center"
+                style={{
+                  height: '32px', padding: '0 12px',
+                  fontSize: '14px', fontWeight: '500', letterSpacing: '-0.006em',
+                  color: '#4f46e5', cursor: 'default',
+                }}
+              >
+                Tasks
+              </span>
             </nav>
 
-            {/* User avatar + sign out */}
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                {session.user.email?.[0]?.toUpperCase() ?? 'U'}
-              </div>
-              <button
-                id="sign-out-btn"
-                type="button"
-                onClick={handleSignOut}
-                className="text-sm text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg px-2.5 py-1 transition-colors hidden sm:block"
-              >
-                Sign out
-              </button>
+            {/* Divider */}
+            <div style={{ width: '1px', height: '20px', background: '#e2e8f0', margin: '0 8px' }} />
+
+            {/* User avatar */}
+            <div
+              className="flex items-center justify-center rounded-full text-white font-bold shrink-0"
+              style={{
+                width: '28px', height: '28px',
+                background: '#4f46e5',
+                fontSize: '12px', fontWeight: '600',
+              }}
+              title={session.user.email}
+            >
+              {userInitial}
             </div>
+
+            {/* Ghost sign-out button — DESIGN.md §Buttons Ghost */}
+            <button
+              id="sign-out-btn"
+              type="button"
+              onClick={handleSignOut}
+              className="rounded-md transition-colors duration-150"
+              style={{
+                height: '32px', padding: '0 12px',
+                fontSize: '13px', fontWeight: '500', letterSpacing: '-0.005em',
+                color: '#64748b', background: 'transparent', border: 'none',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#0f172a' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748b' }}
+            >
+              Sign out
+            </button>
           </div>
         </div>
       </header>
 
-      {/* ── Main ── */}
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      {/* ══ Main canvas ══════════════════════════════════════════════════════ */}
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px' }}>
 
-        {/* Board title row */}
-        <div className="flex items-start justify-between mb-8">
+        {/* ── Board header ── */}
+        <div className="flex items-start justify-between" style={{ marginBottom: '24px' }}>
           <div>
-            <h1 className="font-display text-3xl font-bold text-slate-900 tracking-tight">
+            {/* headline-xl: Plus Jakarta Sans 32px 700 -0.025em */}
+            <h1
+              className="font-display"
+              style={{ fontSize: '32px', fontWeight: '700', lineHeight: '40px', letterSpacing: '-0.025em', color: '#0f172a', margin: 0 }}
+            >
               My Tasks
             </h1>
-            <p className="text-sm text-slate-500 mt-1">
-              {tasks.length} task{tasks.length !== 1 ? 's' : ''} across all columns
+            {/* body-md metadata — Slate 500 */}
+            <p style={{ fontSize: '14px', color: '#64748b', marginTop: '4px', letterSpacing: '-0.006em', fontVariantNumeric: 'tabular-nums' }}>
+              {tasks.length} task{tasks.length !== 1 ? 's' : ''} total
             </p>
+          </div>
+
+          {/* Personal Board chip — label-sm */}
+          <div
+            className="flex items-center gap-2"
+            style={{
+              background: '#ffffff', border: '1px solid #e2e8f0',
+              borderRadius: '9999px', padding: '4px 12px',
+              boxShadow: '0 1px 2px 0 rgba(15,23,42,0.04)',
+              marginTop: '4px',
+            }}
+          >
+            <span style={{ width: '6px', height: '6px', borderRadius: '9999px', background: '#059669', flexShrink: 0, display: 'inline-block' }} />
+            <span style={{ fontSize: '13px', fontWeight: '500', color: '#334155', letterSpacing: '-0.005em' }}>
+              Personal Board
+            </span>
           </div>
         </div>
 
-        {/* ── Kanban columns ── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {STATUSES.map((status) => (
+        {/* ══ Kanban Board ═════════════════════════════════════════════════
+            DESIGN.md: board column wells = Level 0 (flat #F8FAFC).
+            Container card = Level 1 (#FFFFFF, 1px #E2E8F0, shadow-1).
+            Desktop layout: 3-column grid with gutter-lg (1.5rem = 24px).
+        ═════════════════════════════════════════════════════════════════ */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '24px',    /* gutter-lg: 1.5rem */
+          }}
+          className="max-md:grid-cols-1"
+        >
+          {STATUSES.map(status => (
             <div
               key={status}
-              className="bg-white/60 backdrop-blur-sm border border-white/80 rounded-2xl p-5 shadow-sm"
+              className="rounded-xl bg-white"
+              style={{
+                border: '1px solid #e2e8f0',
+                padding: '20px',
+                boxShadow: '0 1px 2px 0 rgba(15,23,42,0.04)',
+              }}
             >
               <KanbanColumn
                 status={status}
